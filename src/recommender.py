@@ -233,20 +233,20 @@ def _apply_diversity(
     selected: List[Tuple[Dict, float, str]] = []
 
     while pool and len(selected) < k:
-        best_i, best_adj, best_pen = 0, None, 0.0
+        best_i, best_adj, best_pen = 0, float("-inf"), 0.0
         for i, (song, base, expl) in enumerate(pool):
-            artist = _song_values(song).get("artist")
-            genre = _song_values(song).get("genre")
+            artist = str(_song_values(song).get("artist", ""))
+            genre = str(_song_values(song).get("genre", ""))
             over_artist = max(0, artist_count.get(artist, 0) - (cfg.max_per_artist - 1))
             over_genre = max(0, genre_count.get(genre, 0) - (cfg.max_per_genre - 1))
             penalty = cfg.penalty * (over_artist + over_genre)
             adj = base - penalty
-            if best_adj is None or adj > best_adj:
+            if adj > best_adj:
                 best_i, best_adj, best_pen = i, adj, penalty
 
         song, base, expl = pool.pop(best_i)
-        artist = _song_values(song).get("artist")
-        genre = _song_values(song).get("genre")
+        artist = str(_song_values(song).get("artist", ""))
+        genre = str(_song_values(song).get("genre", ""))
         artist_count[artist] = artist_count.get(artist, 0) + 1
         genre_count[genre] = genre_count.get(genre, 0) + 1
         if best_pen > 0:
