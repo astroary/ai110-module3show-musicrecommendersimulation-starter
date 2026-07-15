@@ -160,8 +160,13 @@ pip install -r requirements.txt
 3. Run the app:
 
 ```bash
-python -m src.main
+python -m src.main                              # default "balanced" mode
+python -m src.main --mode genre-first           # Challenge 2: scoring modes
+python -m src.main --mode energy-focused --diversity   # + Challenge 3: diversity
 ```
+
+Modes: `balanced`, `genre-first`, `mood-first`, `energy-focused`. See
+[Optional Extensions](#optional-extensions) for what each flag does.
 
 ### Running Tests
 
@@ -177,29 +182,35 @@ You can add more tests in `tests/test_recommender.py`.
 
 ## Sample Recommendation Output
 
-Output from `python -m src.main` with the default profile
-(`genre=pop, mood=happy, energy=0.8`):
+Output from `python -m src.main` (default `balanced` mode) for the High-Energy Pop
+profile, now rendered as a table with the advanced-feature bonuses (Challenge 4):
 
 ```
-Loaded songs: 18
-
-Top recommendations:
-
-Sunrise City - Score: 3.98
-Because: genre match: pop (+2.0); mood match: happy (+1.0); energy fit: 0.82 vs target 0.80 (+0.98)
-
-Gym Hero - Score: 2.87
-Because: genre match: pop (+2.0); energy fit: 0.93 vs target 0.80 (+0.87)
-
-Rooftop Lights - Score: 1.96
-Because: mood match: happy (+1.0); energy fit: 0.76 vs target 0.80 (+0.96)
-
-Concrete Bloom - Score: 1.00
-Because: energy fit: 0.80 vs target 0.80 (+1.00)
-
-Night Drive Loop - Score: 0.95
-Because: energy fit: 0.75 vs target 0.80 (+0.95)
+=== Profile: High-Energy Pop ===
+Preferences: {'genre': 'pop', 'mood': 'happy', 'energy': 0.9, 'min_popularity': 70, 'preferred_decade': 2020, 'preferred_tags': ['euphoric']}
++---+----------------+---------------+-------+------------------------------------------------+
+| # | Title          | Artist        | Score | Why (reasons)                                  |
++---+----------------+---------------+-------+------------------------------------------------+
+| 1 | Sunrise City   | Neon Echo     | 5.11  | genre match: pop (+2.0); mood match: happy     |
+|   |                |               |       | (+1.0); energy fit: 0.82 vs target 0.90        |
+|   |                |               |       | (+0.92); popularity 78 ≥ 70 (+0.39); decade    |
+|   |                |               |       | match: 2020s (+0.5); mood tags euphoric        |
+|   |                |               |       | (+0.30)                                        |
++---+----------------+---------------+-------+------------------------------------------------+
+| 2 | Gym Hero       | Max Pulse     | 3.88  | genre match: pop (+2.0); energy fit: 0.93 vs   |
+|   |                |               |       | target 0.90 (+0.97); popularity 83 ≥ 70        |
+|   |                |               |       | (+0.41); decade match: 2020s (+0.5)            |
++---+----------------+---------------+-------+------------------------------------------------+
+| 3 | Rooftop Lights | Indigo Parade | 2.23  | mood match: happy (+1.0); energy fit: 0.76 vs  |
+|   |                |               |       | target 0.90 (+0.86); popularity 74 ≥ 70        |
+|   |                |               |       | (+0.37)                                        |
++---+----------------+---------------+-------+------------------------------------------------+
 ```
+
+> Note: the Phase 3/4 output blocks elsewhere in this README show the original,
+> pre-extension scores (genre + mood + energy only). The scores above are higher because
+> the [Optional Extensions](#optional-extensions) add popularity, decade, and mood-tag
+> bonuses.
 
 **Screenshot or video** *(optional)*: <!-- Insert a screenshot or demo video link here -->
 
@@ -335,6 +346,56 @@ because it collects genre + mood + a partial energy score while the high-energy 
 match neither category. The takeaway: the categorical bonuses are structurally hard to
 overcome, so a bigger redesign (e.g. capping the genre/mood total, or requiring a minimum
 energy fit) would be needed to truly respect a conflicting preference.
+
+---
+
+## Optional Extensions
+
+I completed all four optional stretch challenges.
+
+### Challenge 1 — Advanced song features
+
+Added five attributes to `data/songs.csv` beyond the baseline: `popularity` (0–100),
+`release_decade`, `mood_tags` (pipe-separated, e.g. `uplifting|euphoric`), `language`,
+and `explicit`. The scorer awards a popularity bonus (scaled, when a profile's
+`min_popularity` is met), a flat `preferred_decade` match bonus, and a per-tag bonus for
+`preferred_tags`. See `_score()` in `src/recommender.py`. (Documented as an agentic
+workflow in [`ai_interactions.md`](ai_interactions.md).)
+
+### Challenge 2 — Multiple scoring modes (Strategy pattern)
+
+`ScoringStrategy` holds the weights; `BALANCED`, `GENRE_FIRST`, `MOOD_FIRST`, and
+`ENERGY_FOCUSED` are the interchangeable strategies. Switch with `--mode`:
+
+```
+python -m src.main --mode genre-first
+```
+
+Under `genre-first` the genre bonus rises to +3.0 and energy is halved, which visibly
+reshuffles the tail of each list. (Design pattern documented in
+[`ai_interactions.md`](ai_interactions.md).)
+
+### Challenge 3 — Diversity / fairness re-ranking
+
+`DiversityConfig` (default: max 1 song per artist, 2 per genre) drives a greedy
+re-ranking that penalizes repeats. Enable with `--diversity`. Example — the Chill Lofi
+profile normally returns two `LoRoom` songs back-to-back; with `--diversity` the second
+one (*Focus Flow*) is penalized −2.0 and drops below a more varied pick:
+
+```
+# diversity OFF                          # diversity ON
+1 Midnight Coding  LoRoom       5.03      1 Midnight Coding    LoRoom         5.03
+2 Library Rain     Paper Lant.  4.80      2 Library Rain       Paper Lanterns 4.80
+3 Focus Flow       LoRoom       4.05      3 Spacewalk Thoughts Orbit Bloom    2.73
+4 Spacewalk Th.    Orbit Bloom  2.73      4 Focus Flow         LoRoom         2.05  (penalized)
+```
+
+### Challenge 4 — Formatted results table
+
+`format_table()` in `src/main.py` renders a dependency-free ASCII table with a wrapped
+"Why (reasons)" column, so every recommendation shows its title, artist, score, and the
+reasons that produced the score (sample under [Sample Recommendation
+Output](#sample-recommendation-output)).
 
 ---
 
