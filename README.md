@@ -207,11 +207,134 @@ Because: energy fit: 0.75 vs target 0.80 (+0.95)
 
 ## Experiments You Tried
 
-Use this section to document the experiments you ran. For example:
+### Stress test: four profiles
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+`python -m src.main` runs three distinct profiles plus one adversarial "conflicting"
+profile (wants high energy but a calm genre/mood):
+
+```
+Loaded songs: 18
+
+=== Profile: High-Energy Pop ===
+Preferences: {'genre': 'pop', 'mood': 'happy', 'energy': 0.9}
+
+Top recommendations:
+
+Sunrise City - Score: 3.92
+Because: genre match: pop (+2.0); mood match: happy (+1.0); energy fit: 0.82 vs target 0.90 (+0.92)
+
+Gym Hero - Score: 2.97
+Because: genre match: pop (+2.0); energy fit: 0.93 vs target 0.90 (+0.97)
+
+Rooftop Lights - Score: 1.86
+Because: mood match: happy (+1.0); energy fit: 0.76 vs target 0.90 (+0.86)
+
+Storm Runner - Score: 0.99
+Because: energy fit: 0.91 vs target 0.90 (+0.99)
+
+Neon Horizon - Score: 0.95
+Because: energy fit: 0.95 vs target 0.90 (+0.95)
+
+
+=== Profile: Chill Lofi ===
+Preferences: {'genre': 'lofi', 'mood': 'chill', 'energy': 0.35, 'likes_acoustic': True}
+
+Top recommendations:
+
+Library Rain - Score: 4.50
+Because: genre match: lofi (+2.0); mood match: chill (+1.0); energy fit: 0.35 vs target 0.35 (+1.00); acoustic match: acousticness 0.86 (+0.5)
+
+Midnight Coding - Score: 4.43
+Because: genre match: lofi (+2.0); mood match: chill (+1.0); energy fit: 0.42 vs target 0.35 (+0.93); acoustic match: acousticness 0.71 (+0.5)
+
+Focus Flow - Score: 3.45
+Because: genre match: lofi (+2.0); energy fit: 0.40 vs target 0.35 (+0.95); acoustic match: acousticness 0.78 (+0.5)
+
+Spacewalk Thoughts - Score: 2.43
+Because: mood match: chill (+1.0); energy fit: 0.28 vs target 0.35 (+0.93); acoustic match: acousticness 0.92 (+0.5)
+
+Coffee Shop Stories - Score: 1.48
+Because: energy fit: 0.37 vs target 0.35 (+0.98); acoustic match: acousticness 0.89 (+0.5)
+
+
+=== Profile: Deep Intense Rock ===
+Preferences: {'genre': 'rock', 'mood': 'intense', 'energy': 0.9}
+
+Top recommendations:
+
+Storm Runner - Score: 3.99
+Because: genre match: rock (+2.0); mood match: intense (+1.0); energy fit: 0.91 vs target 0.90 (+0.99)
+
+Gym Hero - Score: 1.97
+Because: mood match: intense (+1.0); energy fit: 0.93 vs target 0.90 (+0.97)
+
+Neon Horizon - Score: 0.95
+Because: energy fit: 0.95 vs target 0.90 (+0.95)
+
+Iron Verdict - Score: 0.93
+Because: energy fit: 0.97 vs target 0.90 (+0.93)
+
+Sunrise City - Score: 0.92
+Because: energy fit: 0.82 vs target 0.90 (+0.92)
+
+
+=== Profile: Conflicted (folk + melancholy, but energy 0.9) ===
+Preferences: {'genre': 'folk', 'mood': 'melancholy', 'energy': 0.9}
+
+Top recommendations:
+
+Paper Boats - Score: 3.43
+Because: genre match: folk (+2.0); mood match: melancholy (+1.0); energy fit: 0.33 vs target 0.90 (+0.43)
+
+Storm Runner - Score: 0.99
+Because: energy fit: 0.91 vs target 0.90 (+0.99)
+
+Gym Hero - Score: 0.97
+Because: energy fit: 0.93 vs target 0.90 (+0.97)
+
+Neon Horizon - Score: 0.95
+Because: energy fit: 0.95 vs target 0.90 (+0.95)
+
+Iron Verdict - Score: 0.93
+Because: energy fit: 0.97 vs target 0.90 (+0.93)
+```
+
+**Observation:** the three normal profiles return an intuitive #1 that matches genre,
+mood, and energy. The adversarial profile exposes a flaw — *Paper Boats* (energy 0.33)
+tops the list even though the user asked for energy 0.9, because the +3.0 genre+mood
+bonus dwarfs the energy gap.
+
+### Experiment: Weight Shift (double energy, half genre)
+
+I re-ran the Conflicted profile after changing `GENRE_WEIGHT` 2.0 → 1.0 and
+`ENERGY_WEIGHT` 1.0 → 2.0:
+
+```
+=== EXPERIMENT: genre 2.0->1.0, energy 1.0->2.0  | Conflicted profile ===
+Preferences: {'genre': 'folk', 'mood': 'melancholy', 'energy': 0.9}
+
+Paper Boats - Score: 2.86
+Because: genre match: folk (+1.0); mood match: melancholy (+1.0); energy fit: 0.33 vs target 0.90 (+0.86)
+
+Storm Runner - Score: 1.98
+Because: energy fit: 0.91 vs target 0.90 (+1.98)
+
+Gym Hero - Score: 1.94
+Because: energy fit: 0.93 vs target 0.90 (+1.94)
+
+Neon Horizon - Score: 1.90
+Because: energy fit: 0.95 vs target 0.90 (+1.90)
+
+Iron Verdict - Score: 1.86
+Because: energy fit: 0.97 vs target 0.90 (+1.86)
+```
+
+**Result:** the change made the rankings *different but not more accurate*. The energetic
+songs nearly doubled their scores, yet *Paper Boats* still ranked first (2.86 vs 1.98)
+because it collects genre + mood + a partial energy score while the high-energy songs
+match neither category. The takeaway: the categorical bonuses are structurally hard to
+overcome, so a bigger redesign (e.g. capping the genre/mood total, or requiring a minimum
+energy fit) would be needed to truly respect a conflicting preference.
 
 ---
 

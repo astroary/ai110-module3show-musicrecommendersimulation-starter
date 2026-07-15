@@ -5,6 +5,7 @@ from dataclasses import dataclass
 # --- Algorithm Recipe weights (see README "Finalized Algorithm Recipe") ---
 GENRE_WEIGHT = 2.0        # points for a genre match
 MOOD_WEIGHT = 1.0         # points for a mood match
+ENERGY_WEIGHT = 1.0       # multiplier on the 0..1 energy-similarity score
 ACOUSTIC_BONUS = 0.5      # extra points when an acoustic-lover gets an acoustic song
 ACOUSTIC_THRESHOLD = 0.5  # acousticness at or above this counts as "acoustic"
 
@@ -61,7 +62,7 @@ def _score_features(
         reasons.append(f"mood match: {mood} (+{MOOD_WEIGHT:.1f})")
 
     if target_energy is not None:
-        similarity = 1.0 - abs(energy - target_energy)
+        similarity = ENERGY_WEIGHT * (1.0 - abs(energy - target_energy))
         score += similarity
         reasons.append(
             f"energy fit: {energy:.2f} vs target {target_energy:.2f} (+{similarity:.2f})"
